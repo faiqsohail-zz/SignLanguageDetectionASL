@@ -1,3 +1,8 @@
+import os
+os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"  # disable multimedia backend (Windows safe)
+os.environ["OPENCV_VIDEOIO_PRIORITY_GSTREAMER"] = "0"  # disable GUI-based GStreamer
+os.environ["OPENCV_VIDEOIO_PRIORITY_FFMPEG"] = "0"  # disable ffmpeg GUI usage
+os.environ["DISPLAY"] = ""  # make sure no GUI context is used
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
 from ultralytics import YOLO
@@ -72,3 +77,4 @@ st.markdown(
     4. Detected sign names will appear in the sidebar.  
     """
 )
+
