@@ -1,8 +1,9 @@
 --no-cache-dir
 streamlit==1.51.0
+streamlit-webrtc==0.47.7
 ultralytics==8.3.34
 torch>=2.1.0
 torchvision>=0.16.0
-streamlit-webrtc==0.47.7
 opencv-python-headless==4.10.0.84
 numpy>=1.26.0
+av==16.0.1
