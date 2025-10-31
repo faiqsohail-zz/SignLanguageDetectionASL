@@ -1,8 +1,14 @@
-import os
-os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"  # disable multimedia backend (Windows safe)
-os.environ["OPENCV_VIDEOIO_PRIORITY_GSTREAMER"] = "0"  # disable GUI-based GStreamer
-os.environ["OPENCV_VIDEOIO_PRIORITY_FFMPEG"] = "0"  # disable ffmpeg GUI usage
-os.environ["DISPLAY"] = ""  # make sure no GUI context is used
+import os, sys, subprocess
+
+# Force install headless OpenCV (in case ultralytics pulled GUI version)
+subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "opencv-python"], stdout=subprocess.DEVNULL)
+subprocess.run([sys.executable, "-m", "pip", "install", "-U", "opencv-python-headless==4.10.0.84"], stdout=subprocess.DEVNULL)
+
+# Prevent GUI dependencies (no display, no OpenGL)
+os.environ["DISPLAY"] = ""
+os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
+os.environ["OPENCV_VIDEOIO_PRIORITY_GSTREAMER"] = "0"
+os.environ["OPENCV_VIDEOIO_PRIORITY_FFMPEG"] = "0"
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
 from ultralytics import YOLO
@@ -77,4 +83,5 @@ st.markdown(
     4. Detected sign names will appear in the sidebar.  
     """
 )
+
 
