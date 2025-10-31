@@ -3,6 +3,7 @@ from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
 from ultralytics import YOLO
 import av
 import cv2
+import os
 
 st.set_page_config(page_title="ASL Detection", layout="wide")
 
@@ -14,45 +15,60 @@ st.markdown(
     """
 )
 
-# Load YOLOv11 model (your fine-tuned best.pt)
+# ✅ Load YOLOv11 model safely
 @st.cache_resource
 def load_model():
-    model = YOLO("best.pt")  # Ensure best.pt is in the same folder
+    model_path = os.path.join(os.path.dirname(__file__), "best.pt")
+    model = YOLO(model_path)
     return model
 
 model = load_model()
+st.success("✅ YOLOv11 model loaded successfully!")
 
-# Video processor for live detection
+# ✅ Video processor for live ASL detection
 class ASLProcessor(VideoProcessorBase):
     def __init__(self):
         self.model = model
 
     def recv(self, frame):
-        # Convert video frame to array
+        # Convert incoming video frame to ndarray
         img = frame.to_ndarray(format="bgr24")
 
-        # Run YOLOv11 detection
-        results = self.model.predict(img, conf=0.5, verbose=False)
+        # Run YOLOv11 detection (lower conf = more sensitivity)
+        results = self.model.predict(img, conf=0.25, verbose=False)
 
-        # Draw bounding boxes
-        annotated = results[0].plot()
+        # Draw bounding boxes + labels
+        annotated = results[0].plot(labels=True)
 
-        # Return processed frame to Streamlit
+        # Optional: Print detections in app sidebar (debugging)
+        boxes = results[0].boxes
+        if boxes is not None and len(boxes) > 0:
+            detected_labels = [self.model.names[int(box.cls)] for box in boxes]
+            st.sidebar.write("🖐 Detected:", detected_labels)
+
+        # Return processed frame
         return av.VideoFrame.from_ndarray(annotated, format="bgr24")
 
-# Start live video streaming from browser webcam
+# ✅ Start webcam stream (optimized for phones)
 webrtc_streamer(
     key="asl-stream",
     video_processor_factory=ASLProcessor,
-    media_stream_constraints={"video": True, "audio": False},
+    media_stream_constraints={
+        "video": {
+            "width": {"ideal": 1280},
+            "height": {"ideal": 720}
+        },
+        "audio": False
+    },
 )
 
 st.markdown(
     """
     ---
     🧩 **Instructions:**
-    1. Click **Start** to allow webcam access.  
-    2. Show your ASL hand signs in front of the camera.  
-    3. The YOLOv11 model will detect and label them in real-time.
+    1. Tap **Start** and allow camera access on your phone.  
+    2. Hold your hand sign close to the camera in good lighting.  
+    3. Watch the bounding boxes and detected labels in real time.  
+    4. Detected sign names will appear in the sidebar.  
     """
 )
