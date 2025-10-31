@@ -1,41 +1,58 @@
 import streamlit as st
-import cv2
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
 from ultralytics import YOLO
-import tempfile
-import time
+import av
+import cv2
 
 st.set_page_config(page_title="ASL Detection", layout="wide")
 
-# Load model once
+st.title("🤟 Real-Time American Sign Language Detection")
+st.markdown(
+    """
+    This Streamlit app uses your webcam and a fine-tuned **YOLOv11** model 
+    to detect American Sign Language (ASL) gestures in real-time.
+    """
+)
+
+# Load YOLOv11 model (your fine-tuned best.pt)
 @st.cache_resource
 def load_model():
-    model = YOLO("best.pt")  # your fine-tuned model
+    model = YOLO("best.pt")  # Ensure best.pt is in the same folder
     return model
 
 model = load_model()
 
-st.title("🤟 Real-time American Sign Language Detection")
-st.write("This app uses your webcam and YOLOv11 model to detect ASL gestures in real-time.")
+# Video processor for live detection
+class ASLProcessor(VideoProcessorBase):
+    def __init__(self):
+        self.model = model
 
-# Start webcam
-run = st.checkbox('Start Webcam')
-FRAME_WINDOW = st.image([])
+    def recv(self, frame):
+        # Convert video frame to array
+        img = frame.to_ndarray(format="bgr24")
 
-camera = cv2.VideoCapture(0)
+        # Run YOLOv11 detection
+        results = self.model.predict(img, conf=0.5, verbose=False)
 
-while run:
-    ret, frame = camera.read()
-    if not ret:
-        st.warning("Could not access webcam.")
-        break
+        # Draw bounding boxes
+        annotated = results[0].plot()
 
-    frame = cv2.flip(frame, 1)  # mirror view for natural feeling
+        # Return processed frame to Streamlit
+        return av.VideoFrame.from_ndarray(annotated, format="bgr24")
 
-    # Inference
-    results = model.predict(source=frame, conf=0.5, verbose=False)
-    annotated_frame = results[0].plot()
+# Start live video streaming from browser webcam
+webrtc_streamer(
+    key="asl-stream",
+    video_processor_factory=ASLProcessor,
+    media_stream_constraints={"video": True, "audio": False},
+)
 
-    FRAME_WINDOW.image(annotated_frame, channels="BGR")
-
-camera.release()
-st.write("✅ Detection stopped.")
+st.markdown(
+    """
+    ---
+    🧩 **Instructions:**
+    1. Click **Start** to allow webcam access.  
+    2. Show your ASL hand signs in front of the camera.  
+    3. The YOLOv11 model will detect and label them in real-time.
+    """
+)
